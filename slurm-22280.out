@@ -1,0 +1,4 @@
+Plot saved to data/matmul_rate_256x256x256.png
+Plot saved to data/matmul_rate_512x512x512.png
+Plot saved to data/matmul_rate_1024x1024x1024.png
+Plot saved to data/matmul_rate_412x1024x256.png

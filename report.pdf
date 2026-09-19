@@ -1,0 +1,67 @@
+Setup
+- measurements taken on galaxy cluster (Cantauras partition) via sbatch, not the head node.
+- compiled with gcc version 11.5.0 using -O2/O3 (part 2 additionally uses -O0 as required)
+- Each timed result is the average of 10 repititions after one warmp-up run.
+- timed result produces average, median, min, max reported; timing uses clock_gettime(CLOCK_MONOTONIC)
+
+Reports for array_max
+- array-max kernel, two loop varients branching vs branchless, and tested with sorted/reversed/random inputs.
+- Double's generally take longer than ints: about .0006-0.0007 seconds on average.
+- All outputs showed generally no attention to sorted/reversed/random nor branching vs branchless (A B)
+- verified correctness by making a small test with small data samples that confirmed all four functions worked correctly before scaling.
+- Check rate_vs_n.png
+- 4.1 swept double for bandwidth_sweep, branchless (B version) from 2kb to 256mb, doubling each step. 
+- 4.1 pre-recorded cache sizes: L1d =31KB, L2 = 1MB, L3 =24.75MB
+- Check bandiwdth_vs_size.png
+- bandwidth stays consistent between 7.0-7.3 until near the end of L3, then drops.
+
+Reports for Exclusive Prefix Sum
+- Implimented an in-placec exclusive prefix sum, int and double.
+- verified correctness with small test with small data samples for both functions.
+- -O0 is roughly 0.15 seconds slower than -02/-03 for int and double at largest size.
+- -O2 and -O3 perform basically the same.
+- double is consistently slower than int, similar to array_max, this pattern is the same in larger element sizes.
+
+Reports for Matrix Multiplication
+- implimented six loops, compared and verified to each to ijk's output using matrices_equal to check for mismatches.
+- part3_matmul.csv includes a table of the rate (FLOPs/s) for each order at each of the four shapes.
+- The six loops gropu into 3 pairs based on innermost index.
+- ikj and kij are j for innermost and are fastest at 5.3-5.8 GFLOPs/s
+- ijk and jik are k for innermost and are next fastest at 0.6-0.7 GFLOPs/s 
+- jki kji are the slowest with i for innermost at 0.32 GFLOPs/s.
+- Fastest group outperforms the slowest group by 5.48 GFLOPs/s.
+- plots with visuals can be seen under matmul_rate(size).png
+
+Reports for Merge Sort 
+- made recursive merge sort with two temp-buffer types.
+- mergesort_each: mallocs a fresh b ufffer on every recursive call.
+- mergesort_once: allocates one buffer up front and reuses it.
+- verified correctness by checkign the output is non-decreasing and matches a qsort-sorted cpy of the same input.
+- measured both variants plus qsort for omparison. Did it for random, sorted, reverse, and equal input, at all 3 sizes, restoring input before each rep.
+- each vs once, each was relatively faster by around 400k more elements per sec at 10^8 tests.
+- qsort was the slowest with 6.4M elements a sec.
+- sorted vs random: sorted was much faster at 27.9M elements/s in the 100M elements test, and random being much slower at 7.8M elements a second for the same test.
+
+Reports for Breadth-first search
+- NOTE: when doing this RMAT generation targeted 8.388,608 edges, but produced fewer due to duplicate edge collisions in the RMAT model's hub concentration;
+actual measured average degree was 2m/n, from the generator's reported edge count.
+- graphs are stored in CSR format, loaded from .mtx files using the custom reader that builds the offsets/adj arrays from an edge list.
+- BFS was made level-by-level using current and next as frontier arrays, swapped each round, tracking distance to avoid revisiting vertices.
+- BFS ocunted every adjacent-list entry examined towardt the TEPS rate.
+- The reader and traversal were checked with a small 20-vertex chain graph before running at scale.
+- Two graphs were made with n = 1048576 verticces using Python/numpy script, taargeting with average degree of 16 (m = 8388608 undirected edges).
+- ER had m = 8388608 undeirected edges, avg degree of 16.
+- RMAT produced 8119404 undirect edges, average degree of 15.48 due to dup edge collisions as I noted.
+- ER source 738663: Level 0: 1, level 1: 9, level 2: 137, level 3: 2220, level 4: 34875, level 5: 416801, level 6: 59527, level 7: 1006.
+- RMAT source 560940: level 0: 1, level 1: 7, level 2: 1045, level 3: 188416, level 4: 692590, level 5: 65925, level 6: 869, level 7: 11, level 8: 1.
+- ER reaches every vertex, RMAT only reaches 90.5%
+- RMAT gets higher TEPS (median 169.9M while ER was 123.4M)
+- RMAT's structure lets BFS reach most of the graph in fewer rounds.
+
+Rate Comparison across all kernels
+Kernel / Rate Metric / Best Measured Rate
+array maximum / bandwidth (bytes/s) / 11.75GB
+Prefix Sum / Elements per second / 11.26 Billion Elements per second
+Matrix Multiplication / FLOPs per second / 6.73 GFLOPs/s 
+Merge Sort / Elements per second / 46.71 Million Elements per second
+BFS / TEPS (edges/s) / 169 Million Elements per second
